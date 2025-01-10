@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -23,6 +24,7 @@ func main() {
 	// Public routes
 	router.POST("/register", controllers.RegisterUser)
 	router.POST("/login", controllers.LoginUser)
+	router.GET("/", initPage)
 
 	// Protected routes
 	protected := router.Group("/")
@@ -36,4 +38,8 @@ func main() {
 
 	// Start server
 	router.Run(":8080")
+}
+
+func initPage(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": "Bienvenido a la API de FaaS-system"})
 }
