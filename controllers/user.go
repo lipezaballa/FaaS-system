@@ -20,10 +20,12 @@ func LoginUser(c *gin.Context) {
 	}
 
 	storedPassword, exists := users[req.Username]
-	if !exists || storedPassword != req.Password {
+	printVariables(req.Username, req.Password, storedPassword) //FIXME: nil in storedPassword?
+	if !exists || !authentication.CheckPasswordHash(req.Password, storedPassword) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
+
 
 	tokenString, err := authentication.GenerateToken(req.Username)
 	if err != nil {
@@ -48,7 +50,14 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	users[req.Username] = req.Password
+	hashedPassword, err := authentication.HashPassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Error hashing password"})
+		return
+	}
+
+	users[req.Username] = hashedPassword
+	printVariables(req.Username, req.Password, hashedPassword)
 	CreateMapForUser(&req)
 
 	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
@@ -59,4 +68,11 @@ func GetUserInfo(c *gin.Context) {
 	fmt.Println("GetUser")
 	username := c.GetString("username")
 	c.JSON(http.StatusOK, gin.H{"username": username})
+}
+
+func printVariables(username string, password string, hashedPassword string) {
+	fmt.Println("user: ", username)
+	fmt.Println("pass: ", password)
+	fmt.Println("hashedPass: ", hashedPassword)
+	fmt.Println(users)
 }

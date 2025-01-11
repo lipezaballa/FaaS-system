@@ -39,6 +39,13 @@ func parseToken(tokenString string) (string, error) {
 func AuthMiddleware(c *gin.Context) {
 	fmt.Println("AuthMiddleware")
 	tokenString := c.GetHeader("Authorization")
+
+	// Eliminar el prefijo "Bearer " si está presente
+	if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+		tokenString = tokenString[7:]
+	}
+
+	fmt.Println("token; ", tokenString)
 	if tokenString == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
 		c.Abort()

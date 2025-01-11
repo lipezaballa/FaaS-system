@@ -18,12 +18,9 @@ func CreateMapForUser(req *authentication.Request) {
 // Register a new function
 func RegisterFunction(c *gin.Context) {
 	fmt.Println("RegisterFunction")
-	type Request struct {
-		Name        string `json:"name"`
-		ImageRef    string `json:"image_ref"`
-	}
+	
 
-	var req Request
+	var req FunctionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
@@ -36,6 +33,7 @@ func RegisterFunction(c *gin.Context) {
 	}
 
 	functions[username][req.Name] = req.ImageRef
+	printFunctions()
 	c.JSON(http.StatusCreated, gin.H{"message": "Function registered successfully"})
 }
 
@@ -51,6 +49,7 @@ func DeleteFunction(c *gin.Context) {
 	}
 
 	delete(functions[username], functionName)
+	printFunctions()
 	c.JSON(http.StatusOK, gin.H{"message": "Function deleted successfully"})
 }
 
@@ -60,24 +59,29 @@ func InvokeFunction(c *gin.Context) {
 	functionName := c.Param("function_name")
 	username := c.GetString("username")
 
+	fmt.Println("Username: ", username)
+	fmt.Println("function: ", functionName)
+
 	imageRef, exists := functions[username][functionName]
 	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Function not found"})
 		return
 	}
 
-	type Request struct {
-		Param string `json:"param"`
-	}
+	fmt.Println("imageRef: ", imageRef)
 
-	var req Request
+	var req FunctionParameter
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
 	}
 
-	// Simulate function execution
+	// FIXME: Simulate function execution
 	result := "Executed " + functionName + " with param: " + req.Param
 	log.Printf("Running container with image: %s", imageRef)
 	c.JSON(http.StatusOK, gin.H{"result": result})
+}
+
+func printFunctions() {
+	fmt.Println(functions)
 }
