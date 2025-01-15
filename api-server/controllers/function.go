@@ -6,10 +6,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lipezaballa/FaaS-system/authentication"
+	"github.com/lipezaballa/FaaS-system/reverse-proxy/authentication"
 )
 
 var functions = map[string]map[string]string{} // username:function_name:image_reference
+
 
 func CreateMapForUser(req *authentication.Request) {
 	functions[req.Username] = make(map[string]string)

@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/lipezaballa/FaaS-system/authentication"
-	"github.com/lipezaballa/FaaS-system/controllers"
+	"github.com/lipezaballa/FaaS-system/api-server/controllers"
+	"github.com/lipezaballa/FaaS-system/reverse-proxy/authentication"
 )
 
 func main() {

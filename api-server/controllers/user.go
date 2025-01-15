@@ -5,10 +5,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lipezaballa/FaaS-system/authentication"
+	"github.com/lipezaballa/FaaS-system/reverse-proxy/authentication"
 )
 
+
 var users = map[string]string{}   // username:password
+
 
 // Login user and return a token
 func LoginUser(c *gin.Context) {
