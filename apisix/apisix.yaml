@@ -1,0 +1,42 @@
+apisix:
+  node_listen: 9080
+  enable_admin: true
+  admin_listen:
+    ip: 0.0.0.0
+    port: 9180
+  allow_admin:
+    - 0.0.0.0/0
+
+routes:
+  - uri: /register
+    methods: [POST]
+    upstream:
+      nodes:
+        - host: api-server
+          port: 8080
+          weight: 1
+      type: roundrobin
+  - uri: /login
+    methods: [POST]
+    upstream:
+      nodes:
+        - host: api-server
+          port: 8080
+          weight: 1
+      type: roundrobin
+  - uri: /functions/*
+    methods: [POST, DELETE]
+    upstream:
+      nodes:
+        - host: api-server
+          port: 8008
+          weight: 1
+      type: roundrobin
+  - uri: /me
+    methods: [GET]
+    upstream:
+      nodes:
+        - host: api-server
+          port: 8080
+          weight: 1
+      type: roundrobin
