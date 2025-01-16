@@ -1,0 +1,42 @@
+services:
+    nats:
+        image: nats:latest
+        container_name: nats_server
+        command: ["-js"] # Habilita JetStream y KV Store
+        ports:
+            - "4222:4222"
+            - "8222:8222" # UI para monitoreo
+        networks:
+            - my_network
+
+    apiserver:
+        image: api-server:1.0
+        build:
+            context: .
+            dockerfile: api-server/Dockerfile
+        container_name: api-server
+        ports:
+            - "8080:8080"
+        depends_on:
+            - nats
+        environment:
+            - NATS_URL=nats://nats_server:4222
+        networks:
+            - my_network
+
+    worker:
+        image: worker:1.0
+        build:
+            context: .
+            dockerfile: worker/Dockerfile
+        container_name: worker
+        depends_on:
+            - nats
+        environment:
+            - NATS_URL=nats://nats_server:4222
+        networks:
+            - my_network
+
+networks:
+    my_network:
+        driver: bridge
