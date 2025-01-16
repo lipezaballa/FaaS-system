@@ -9,7 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/lipezaballa/FaaS-system/api-server/controllers"
 	"github.com/lipezaballa/FaaS-system/api-server/natsConnection"
-	"github.com/lipezaballa/FaaS-system/reverse-proxy/authentication"
+//	"github.com/lipezaballa/FaaS-system/reverse-proxy/authentication"
 	"github.com/lipezaballa/FaaS-system/shared"
 	"github.com/nats-io/nats.go"
 )
@@ -56,7 +56,7 @@ func main() {
 
 	// Protected routes
 	protected := router.Group("/")
-	protected.Use(authentication.AuthMiddleware)
+	//protected.Use(authentication.AuthMiddleware)
 	{
 		protected.POST("/functions", controllers.RegisterFunction)
 		protected.DELETE("/functions/:function_name", controllers.DeleteFunction)

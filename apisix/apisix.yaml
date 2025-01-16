@@ -1,21 +1,22 @@
 apisix:
-  node_listen: 9080
-  enable_admin: true
+  node_listen: 9080 # Puerto donde apisix escucha las solicitudes HTTP
+  enable_admin: true # Habilita la interfaz administrativa
   admin_listen:
-    ip: 0.0.0.0
-    port: 9180
+    ip: 0.0.0.0 # Escucha en todas las interfaces de red
+    port: 9180 # Puerto para la interfaz
   allow_admin:
-    - 0.0.0.0/0
+    - 192.168.0.0/24 # Permite el acceso a la interfaz desde esta subred
 
+# Endpoints de la API REST que expone el proxy inverso
 routes:
   - uri: /register
-    methods: [POST]
+    methods: [POST] # Permite solicitudes POST
     upstream:
       nodes:
-        - host: api-server
+        - host: api-server # Envía las solicitudes al contenedor api-server
           port: 8080
-          weight: 1
-      type: roundrobin
+          weight: 1 # Configuración para balanceo de carga (actualmente con un solo nodo)
+      type: roundrobin # Algoritmo de balanceo de carga
   - uri: /login
     methods: [POST]
     upstream:
@@ -25,20 +26,20 @@ routes:
           weight: 1
       type: roundrobin
   - uri: /functions/*
-    methods: [POST, DELETE]
+    methods: [POST, DELETE] # Permite solicitudes POST y DELETE
     upstream:
       nodes:
         - host: api-server
-          port: 8008
+          port: 8080
           weight: 1
       type: roundrobin
     plugins:
-      - name: jwt-auth
+      - name: jwt-auth # Habilita autenticación JWT
         config:
-          key: "Authorization"
-          secret: "your_jwt_secret"
+          key: "Authorization" # Header donde se envía el token JWT
+          secret: "your_jwt_secret" # Llave para verificar el token
   - uri: /me
-    methods: [GET]
+    methods: [GET] # Permite solicitudes GET
     upstream:
       nodes:
         - host: api-server
