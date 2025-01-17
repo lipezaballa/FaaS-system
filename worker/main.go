@@ -57,7 +57,7 @@ func main() {
 	}*/
 
 	// Verificamos si el stream existe
-	streamName := "messages_stream"
+	streamName := "messages_worker"
 	_, err = js.StreamInfo(streamName)
 	if err != nil {
 		// El stream no existe, por lo tanto, lo creamos
@@ -66,8 +66,12 @@ func main() {
 		// Configuración para crear el stream (puedes ajustarlo según tus necesidades)
 		streamConfig := &nats.StreamConfig{
 			Name:     streamName,
-			Subjects: []string{"queue.messages"},
-			Storage:  nats.FileStorage, // O puedes usar nats.MemoryStorage dependiendo de tu caso
+			Subjects: []string{"queue.messages.worker"},
+			Retention: nats.WorkQueuePolicy,    // Retención de mensajes basada en work queues
+			MaxMsgs:   -1,                      // Ilimitado número de mensajes
+			MaxBytes:  -1,                      // Ilimitado tamaño del stream
+			MaxAge:    0,                       // Ilimitado tiempo de retención
+			Storage:   nats.MemoryStorage, 
 		}
 
 		// Intentamos crear el stream
@@ -82,7 +86,7 @@ func main() {
 	}
 
 	// Subscribe to the queue messages and use the same queue group for all workers
-	sub, err := js.QueueSubscribe("queue.messages", "worker_group", func(msg *nats.Msg) {
+	sub, err := js.QueueSubscribe("queue.messages.worker", "worker_group", func(msg *nats.Msg) {
 		log.Printf("Worker received message: %s", string(msg.Data))
 		// Process the message here (run docker command, etc.)
 		username, functionName, param, err := SplitFunctionParam(string(msg.Data))
@@ -96,7 +100,9 @@ func main() {
 		if err != nil {
 			log.Printf("Error ejecutando función para %s: %s\n", username, err.Error())
 			//js.Publish(ctx,"results."+requestId[1], []byte(fmt.Sprintf("Error para %s: %s", username, err.Error())))
-			nc.Publish(msg.Reply, []byte(fmt.Sprintf("Error: %v", err)))
+			if msg.Reply != "" {
+				nc.Publish(msg.Reply, []byte(fmt.Sprintf("Error: %v", err)))
+			}
 			return
 		}
 
@@ -110,11 +116,13 @@ func main() {
 		}*/
 
 		// Publicar el resultado de vuelta en el API Server
-		err = nc.Publish(msg.Reply, []byte(result))
-		if err != nil {
-			log.Printf("Error al enviar la respuesta: %v", err)
-		} else {
-			log.Printf("Resultado enviado: %s", result)
+		if msg.Reply != "" {
+			err = nc.Publish(msg.Reply, []byte(result))
+			if err != nil {
+				log.Printf("Error al enviar la respuesta: %v", err)
+			} else {
+				log.Printf("Resultado enviado: %s", result)
+			}
 		}
 
 		msg.Ack() // Acknowledge message when processed

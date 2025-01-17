@@ -41,7 +41,7 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 		}
 	}
 
-	streamName := "messages_stream"
+	streamName := "messages_worker"
 	_, err = js.StreamInfo(streamName)
 	if err != nil {
 		// El stream no existe, por lo tanto, lo creamos
@@ -51,7 +51,11 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 		streamConfig := &nats.StreamConfig{
 			Name:     streamName,
 			Subjects: []string{channel},
-			Storage:  nats.FileStorage, // O puedes usar nats.MemoryStorage dependiendo de tu caso
+			Retention: nats.WorkQueuePolicy,    // Retención de mensajes basada en work queues
+			MaxMsgs:   -1,                      // Ilimitado número de mensajes
+			MaxBytes:  -1,                      // Ilimitado tamaño del stream
+			MaxAge:    0,                       // Ilimitado tiempo de retención
+			Storage:   nats.MemoryStorage,      // Almacenar en memoria (puedes usar FileStorage)
 		}
 
 		// Intentamos crear el stream
@@ -85,7 +89,7 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 func SendRequest(msg string) (*nats.Msg, error) {
 	// Enviar mensaje y esperar respuesta
 	if (natsConn != nil && natsConn.Nc != nil) {
-		resp, err := natsConn.Nc.Request("queue.messages", []byte(msg), 5*time.Second)
+		resp, err := natsConn.Nc.Request("queue.messages.worker", []byte(msg), 5*time.Second)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "No se recibió respuesta: %v", err)
 			return nil, err
