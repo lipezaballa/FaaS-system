@@ -34,7 +34,7 @@ func main() {
 		log.Fatalf("Error al inicializar JetStream: %v", err)
 	}
 
-    // Acceder al KV Store (asegúrate de que el bucket existe)
+	// Acceder al KV Store (asegúrate de que el bucket existe)
 	kv, err := js.KeyValue("messages_store")
 	if err != nil {
 		log.Printf("Bucket 'messages_store' no encontrado, creándolo...")
@@ -43,8 +43,10 @@ func main() {
 			Bucket: "messages_store",
 		})
 		if err != nil {
-			log.Fatalf("Error al crear el KV Store: %v", err)
+			log.Fatalf("Error al crear el bucket 'messages_store': %v", err)
 		}
+	} else if err != nil {
+		log.Fatalf("Error al acceder al KV Store: %v")
 	}
 
 	// Suscribirse a la cola "queue.messages" para recibir las activaciones de funciones
@@ -132,7 +134,7 @@ func main() {
 // SplitFunctionParam divide una cadena en función y parámetro
 func SplitFunctionParam(input string) (string, string, string, error) {
 	parts := strings.Split(input, "|")
-	
+
 	if len(parts) != 3 {
 		return "", "", "", fmt.Errorf("el formato es incorrecto, se esperaba 'functionname|param'")
 	}
@@ -197,7 +199,7 @@ func SplitFunctionParam(input string) (string, string, string, error) {
 }*/
 
 // RunContainer ejecuta un contenedor Docker con una imagen y un parámetro
-func RunContainer(image string, param string) ([]byte,error) {
+func RunContainer(image string, param string) ([]byte, error) {
 	// Comando para ejecutar el contenedor
 	cmd := exec.Command("docker", "run", "--rm", image, param)
 
@@ -213,9 +215,9 @@ func RunContainer(image string, param string) ([]byte,error) {
 
 func processFunction(workerMsgsId, functionName, parameter string) (string, error) {
 	// Simulación de ejecución con Docker
-    log.Printf("[%s] PROCESANDO la función %s", workerMsgsId, functionName)
+	log.Printf("[%s] PROCESANDO la función %s", workerMsgsId, functionName)
 	path := os.Getenv("PATH")
-    fmt.Println("PATH:", path)
+	fmt.Println("PATH:", path)
 	cmd := exec.Command("docker", "run", "--rm", functionName, parameter)
 	fmt.Println("Ejecutando comando:", strings.Join(cmd.Args, " "))
 	var out, stderr bytes.Buffer

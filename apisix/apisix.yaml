@@ -1,0 +1,46 @@
+routes:
+  - uri: /register
+    methods: [POST]
+    upstream:
+      nodes:
+        - host: api-server
+          port: 8080
+          weight: 1
+      type: roundrobin
+  
+  - uri: /login
+    methods: [POST]
+    upstream:
+      nodes:
+        - host: api-server
+          port: 8080
+          weight: 1
+      types: roundrobin
+  
+  - uri: /functions/*
+    methods: [POST, DELETE]
+    upstreams:
+      nodes:
+        - host: api-server
+          port: 8080
+          weight: 1
+      type: roundrobin
+    plugins:
+      - name: jwt-auth
+        config:
+          key: "Authorization"
+          secret: "your_jwt_secret"
+  
+  - uri: /me
+    methods: [GET]
+    upstream:
+      nodes:
+        - host: api-server
+          port: 8080
+          weight: 1
+      type: roundrobin
+    plugins:
+      - name: jwt-auth
+        config:
+          key: "Authorization"
+          secret: "your_jwt_secret"

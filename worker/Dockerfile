@@ -27,7 +27,7 @@ RUN go build -o worker .
 FROM alpine:latest
 
 # Instala las dependencias necesarias
-# RUN apk --no-cache add ca-certificates
+RUN apk add --no-cache curl && curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.7.tgz | tar xz && mv docker/docker /usr/local/bin/ && chmod +x /usr/local/bin/docker && rm -rf docker
 
 # Establece el directorio de trabajo
 # WORKDIR /root/
