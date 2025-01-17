@@ -1,45 +1,13 @@
-version: "3.9"
-
 services:
-  etcd:
-    image: bitnami/etcd:latest
-    container_name: etcd
-    environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
+  nats:
+    image: nats:latest
+    container_name: nats_server
+    command: ["-js"] # Habilita JetStream y KV Store
     ports:
-      - "2379:2379" # Puerto para comunicación cliente-servidor
-      - "2380:2380" # Puerto para comunicación entre nodos etcd
-    # Verifica si etcd está activo
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:2379/version"]
-      interval: 5s
-      retries: 5
+      - "4222:4222"
+      - "8222:8222" # UI para monitoreo
     networks:
       - my_network
-
-  apisix:
-    image: apache/apisix:latest
-    container_name: apisix
-    depends_on:
-      etcd:
-        condition: service_healthy # Asegura que etcd esté listo antes de iniciar APISIX
-    environment:
-      - JWT_SECRET=your_jwt_secret # Llave secreta para validar los tokens JWT
-    ports:
-      - "9080:9080" # Puerto HTTP de APISIX
-      - "9443:9443" # Puerto HTTPS de APISIX
-    volumes:
-      - ./apisix/apisix.yaml:/usr/local/conf/config.yaml
-    networks:
-      - my_network
-    # Espera a que etcd esté listo para iniciar APISIX
-    command: >
-      sh -c "
-      until curl -sf http://etcd:2379/version; do
-        echo 'Waiting for etcd...';
-        sleep 2;
-      done;
-      /apisix start"
 
   apiserver:
     image: api-server:1.0
@@ -47,29 +15,12 @@ services:
       context: .
       dockerfile: api-server/Dockerfile
     container_name: api-server
-    environment:
-      - JWT_SECRET=your_jwt_secret # Llave para firmar/verificar JWTs
-      - NATS_URL=nats://nats_server:4222 # URL del servidor NATS para comunicación con los workers
+    ports:
+      - "8080:8080"
     depends_on:
-      nats:
-        condition: service_started # Asegura que el servidor NATS esté en ejecución antes de iniciar este servicio
-    ports:
-      - "8080:8080" # Expone el puerto donde corre la API
-    networks:
-      - my_network
-
-  nats:
-    image: nats:latest
-    container_name: nats_server
-    command: ["-js"] # Habilita JetStream y KV Store
-    ports:
-      - "4222:4222" # Puerto de comunicación principal para NATS
-      - "8222:8222" # Puerto para la interfaz de monitoreo
-    # Verifica si el servidor NATS está activo
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8222"]
-      interval: 5s
-      retries: 5
+      - nats
+    environment:
+      - NATS_URL=nats://nats_server:4222
     networks:
       - my_network
 
@@ -80,14 +31,12 @@ services:
       dockerfile: worker/Dockerfile
     container_name: worker
     depends_on:
-      nats:
-        condition: service_healthy # Asegura que el servidor NATS esté listo antes de iniciar el worker
+      - nats
     environment:
-      - NATS_URL=nats://nats_server:4222 # URL del servidor NATS para suscribirse y publicar mensajes
+      - NATS_URL=nats://nats_server:4222
     networks:
       - my_network
 
-# Red de puente para comunicacón entre contenedores
 networks:
   my_network:
     driver: bridge
