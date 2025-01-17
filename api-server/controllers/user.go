@@ -24,7 +24,7 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 	storedPassword := string(storedPasswordEntry.Value())
-	printVariables(req.Username, req.Password, storedPassword) //FIXME: nil in storedPassword?
+	printVariables(req.Username, storedPassword)
 	if !authentication.CheckPasswordHash(req.Password, storedPassword) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
@@ -62,7 +62,7 @@ func RegisterUser(c *gin.Context) {
 
 	natsConnection.StoreUser(req.Username, hashedPassword)
 	natsConnection.PrintValues()
-	printVariables(req.Username, req.Password, hashedPassword)
+	printVariables(req.Username, hashedPassword)
 
 	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
 }
@@ -74,8 +74,7 @@ func GetUserInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"username": username})
 }
 
-func printVariables(username string, password string, hashedPassword string) {
+func printVariables(username string, hashedPassword string) {
 	fmt.Println("user: ", username)
-	fmt.Println("pass: ", password)
 	fmt.Println("hashedPass: ", hashedPassword)
 }
