@@ -34,10 +34,17 @@ func main() {
 		log.Fatalf("Error al inicializar JetStream: %v", err)
 	}
 
-	// Acceder al KV Store (asegúrate de que el bucket existe)
+    // Acceder al KV Store (asegúrate de que el bucket existe)
 	kv, err := js.KeyValue("messages_store")
 	if err != nil {
-		log.Fatalf("Error al acceder al KV Store: %v", err)
+		log.Printf("Bucket 'messages_store' no encontrado, creándolo...")
+		// Crear el bucket si no existe
+		kv, err = js.CreateKeyValue(&nats.KeyValueConfig{
+			Bucket: "messages_store",
+		})
+		if err != nil {
+			log.Fatalf("Error al crear el KV Store: %v", err)
+		}
 	}
 
 	// Suscribirse a la cola "queue.messages" para recibir las activaciones de funciones
