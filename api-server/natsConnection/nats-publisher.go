@@ -19,7 +19,7 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 	}
 
 	log.Println("iniciar JetStream")
-	// Key-Value Store para historial de mensajes
+
 	js, err := nc.JetStream()
 	if err != nil {
 		log.Fatalf("Error al inicializar JetStream: %v", err)
@@ -44,18 +44,17 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 	streamName := "messages_worker"
 	_, err = js.StreamInfo(streamName)
 	if err != nil {
-		// El stream no existe, por lo tanto, lo creamos
 		log.Printf("El stream '%s' no existe. Creando el stream...", streamName)
 
 		// Configuración para crear el stream (puedes ajustarlo según tus necesidades)
 		streamConfig := &nats.StreamConfig{
 			Name:     streamName,
 			Subjects: []string{channel},
-			Retention: nats.WorkQueuePolicy,    // Retención de mensajes basada en work queues
-			MaxMsgs:   -1,                      // Ilimitado número de mensajes
-			MaxBytes:  -1,                      // Ilimitado tamaño del stream
-			MaxAge:    0,                       // Ilimitado tiempo de retención
-			Storage:   nats.MemoryStorage,      // Almacenar en memoria (puedes usar FileStorage)
+			Retention: nats.WorkQueuePolicy,    
+			MaxMsgs:   -1,                      
+			MaxBytes:  -1,                      
+			MaxAge:    0,                       
+			Storage:   nats.MemoryStorage,      
 		}
 
 		// Intentamos crear el stream
@@ -68,18 +67,6 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 	} else {
 		log.Printf("El stream '%s' ya existe", channel)
 	}
-
-
-
-	// Crear un stream si no existe
-	/*_, err = js.AddStream(&nats.StreamConfig{
-		Name:     "messages_stream",  // Nombre del stream
-		Subjects: []string{channel},  // El subject que usará el worker
-		Storage:  nats.MemoryStorage, // Almacenamiento en memoria
-	})
-	if err != nil {
-		log.Fatalf("Error creando el stream: %v", err)
-	}*/
 
 	natsConn.Kv = kv
 	natsConn.Channel = channel
@@ -147,7 +134,6 @@ func StoreUser(username string, password string) error {
 	log.Println("Guardar en kv store")
 	if (natsConn != nil && natsConn.Kv != nil) {
 		// Guardar en KV Store
-		//key := fmt.Sprintf("users/%s/functions/%s", username, functionName)
 		_, err := natsConn.Kv.Put(username, []byte(password))
 		if err != nil {
 			log.Fatalf("Error al guardar en KV Store: %v", err)
@@ -172,7 +158,7 @@ func PrintValues() error {
 		}
 
 		for _, key := range keys {
-			entry, err := natsConn.Kv.Get(key) //FIXME
+			entry, err := natsConn.Kv.Get(key)
 			if err == nil {
 				fmt.Printf("Database: Key: %s, Value: %s\n", key, string(entry.Value()))
 			}
@@ -231,7 +217,7 @@ func DeleteAllKeysFromKV() error {
 		}
 
 		for _, key := range keys {
-			err := natsConn.Kv.Delete(key) //FIXME
+			err := natsConn.Kv.Delete(key)
 			if err != nil {
 				log.Printf("Error al eliminar la clave '%s': %v", key, err)
 				return err

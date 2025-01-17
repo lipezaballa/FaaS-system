@@ -9,12 +9,6 @@ import (
 	"github.com/lipezaballa/FaaS-system/api-server/natsConnection"
 )
 
-//var functions = map[string]map[string]string{} // username:function_name:image_reference
-
-/*func CreateMapForUser(req *authentication.Request) {
-	functions[req.Username] = make(map[string]string)
-}*/
-
 // Register a new function
 func RegisterFunction(c *gin.Context) {
 	fmt.Println("RegisterFunction")
@@ -28,17 +22,15 @@ func RegisterFunction(c *gin.Context) {
 
 	username := c.GetString("username")
 	key := fmt.Sprintf("users/%s/functions/%s", username, req.Name)
-	//if _, exists := functions[username][req.Name]; exists {
+
 	if _, exists := natsConnection.GetValue(key); exists {
 		c.JSON(http.StatusConflict, gin.H{"error": "Function already exists"})
 		return
 	}
 
-	//functions[username][req.Name] = req.ImageRef
-
 	natsConnection.StoreFunction(username, req.Name, req.ImageRef)
 	natsConnection.PrintValues()
-	//printFunctions()
+
 	c.JSON(http.StatusCreated, gin.H{"message": "Function registered successfully"})
 }
 
@@ -49,19 +41,14 @@ func DeleteFunction(c *gin.Context) {
 	username := c.GetString("username")
 
 	key := fmt.Sprintf("users/%s/functions/%s", username, functionName)
-	//imageRef, exists := natsConnection.GetValue(key)
-	//if _, exists := functions[username][functionName]; !exists {
+
 	if _, exists := natsConnection.GetValue(key); !exists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Function not found"})
 		return
 	}
 
-	//delete(functions[username], functionName)
-
-	//key := fmt.Sprintf("users/%s/functions/%s", username, functionName)
 	natsConnection.DeleteKeyFromKV(key)
 	natsConnection.PrintValues()
-	//printFunctions()
 	c.JSON(http.StatusOK, gin.H{"message": "Function deleted successfully"})
 }
 
@@ -70,7 +57,6 @@ func InvokeFunction(c *gin.Context) {
 	functionName := c.Param("function_name")
 	username := c.GetString("username")
 
-	//imageRef, exists := functions[username][functionName]
 	key := fmt.Sprintf("users/%s/functions/%s", username, functionName)
 	imageRef, exists := natsConnection.GetValue(key)
 	if !exists {
@@ -90,12 +76,9 @@ func InvokeFunction(c *gin.Context) {
 	if err != nil {
 		log.Println("error in sendRequest, ", err)
 	}
-	// FIXME: Simulate function execution
+
 	result := "Executed " + functionName + " with param: " + req.Param + ", Result: " + string(resp.Data)
 	log.Println(result)
 	c.JSON(http.StatusOK, gin.H{"result": string(resp.Data)})
 }
 
-/*func printFunctions() {
-	fmt.Println(functions)
-}*/

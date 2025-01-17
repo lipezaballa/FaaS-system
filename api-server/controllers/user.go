@@ -9,8 +9,6 @@ import (
 	"github.com/lipezaballa/FaaS-system/reverse-proxy/authentication"
 )
 
-//var users = map[string]string{}   // username:password
-
 // Login user and return a token
 func LoginUser(c *gin.Context) {
 	fmt.Println("LoginUser")
@@ -20,7 +18,6 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
-	//storedPassword, exists := users[req.Username]
 	storedPasswordEntry, exists := natsConnection.GetValue(req.Username)
 	if (!exists) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User no exists"})
@@ -52,7 +49,6 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	//if _, exists := users[req.Username]; exists {
 	if _, exists := natsConnection.GetValue(req.Username); exists {
 		c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
 		return
@@ -64,11 +60,9 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	//users[req.Username] = hashedPassword
 	natsConnection.StoreUser(req.Username, hashedPassword)
 	natsConnection.PrintValues()
 	printVariables(req.Username, req.Password, hashedPassword)
-	//CreateMapForUser(&req)
 
 	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
 }
@@ -84,5 +78,4 @@ func printVariables(username string, password string, hashedPassword string) {
 	fmt.Println("user: ", username)
 	fmt.Println("pass: ", password)
 	fmt.Println("hashedPass: ", hashedPassword)
-	//fmt.Println(users)
 }

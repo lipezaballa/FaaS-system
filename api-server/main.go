@@ -33,7 +33,7 @@ func main() {
 	}
 	defer nc.Close()
 
-	natsConn, err = natsConnection.InitJetStream(nc, "queue.messages")
+	natsConn, err = natsConnection.InitJetStream(nc, "queue.messages.worker")
 	if err != nil {
 		log.Fatalf("Error al iniciar JetStream y KV Store: %v", err)
 	}
@@ -46,13 +46,6 @@ func main() {
 	router.POST("/login", controllers.LoginUser)
 	router.GET("/", initPage)
 	router.DELETE("/database", deleteDataBase)
-
-	//Store natsConn in Gin Context
-	/*router.Use(func(c *gin.Context) { //FIXME, could be used in protected paths?
-		// Pasar natsConn a todas las rutas usando Set
-		c.Set("natsConn", natsConn)
-		c.Next() // Continuar con la siguiente ruta
-	})*/
 
 	// Protected routes
 	protected := router.Group("/")
@@ -69,40 +62,9 @@ func main() {
 }
 
 func initPage(c *gin.Context) {
-	/*natsConn, err := getNatsConnFromContext(c)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
-	}*/
-	/*message := fmt.Sprintf("Peticion 1|Param 1")
-	resp, err := natsConnection.SendRequest(natsConn, message)
-	if err != nil {
-		log.Println("error in sendRequest, ", err)
-	}
-	natsConnection.StoreInKv(natsConn, string(resp.Data))
-	natsConnection.PrintValues()*/
 	c.JSON(http.StatusOK, gin.H{"message": "Bienvenido a la API de FaaS-system"})
 }
 
 func deleteDataBase(c *gin.Context) {
 	natsConnection.DeleteAllKeysFromKV()
 }
-
-/*func getNatsConnFromContext(c *gin.Context) (*shared.NatsConnection, error) {
-	natsConn, exists := c.Get("natsConn")
-	if !exists {
-		// Si no se encuentra natsConn, retornar un error
-		err := errors.New("Conexión a NATS no disponible")
-		//c.JSON(http.StatusInternalServerError, gin.H{"error": "Conexión a NATS no disponible"})
-		return nil, err
-	}
-
-	// Convertir natsConn a su tipo real (*natsConnection.NatsConnection)
-	conn, ok := natsConn.(*shared.NatsConnection)
-	if !ok {
-		// Si la conversión falla, retornar un error
-		err := errors.New("Error al convertir la conexión NATS")
-		//c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al convertir la conexión NATS"})
-		return nil, err
-	}
-	return conn, nil
-}*/
