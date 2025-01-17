@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/lipezaballa/FaaS-system/shared"
@@ -39,25 +40,61 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 			return nil, err
 		}
 	}
+
+	streamName := "messages_stream"
+	_, err = js.StreamInfo(streamName)
+	if err != nil {
+		// El stream no existe, por lo tanto, lo creamos
+		log.Printf("El stream '%s' no existe. Creando el stream...", streamName)
+
+		// Configuración para crear el stream (puedes ajustarlo según tus necesidades)
+		streamConfig := &nats.StreamConfig{
+			Name:     streamName,
+			Subjects: []string{channel},
+			Storage:  nats.FileStorage, // O puedes usar nats.MemoryStorage dependiendo de tu caso
+		}
+
+		// Intentamos crear el stream
+		_, err = js.AddStream(streamConfig)
+		if err != nil {
+			log.Fatalf("Error creando el stream: %v", err)
+		}
+
+		log.Printf("Stream '%s' creado exitosamente", channel)
+	} else {
+		log.Printf("El stream '%s' ya existe", channel)
+	}
+
+
+
+	// Crear un stream si no existe
+	/*_, err = js.AddStream(&nats.StreamConfig{
+		Name:     "messages_stream",  // Nombre del stream
+		Subjects: []string{channel},  // El subject que usará el worker
+		Storage:  nats.MemoryStorage, // Almacenamiento en memoria
+	})
+	if err != nil {
+		log.Fatalf("Error creando el stream: %v", err)
+	}*/
+
 	natsConn.Kv = kv
 	natsConn.Channel = channel
 	return natsConn, nil
 }
 
 func SendRequest(msg string) (*nats.Msg, error) {
-	log.Println("enviando request")
 	// Enviar mensaje y esperar respuesta
 	if (natsConn != nil && natsConn.Nc != nil) {
-		resp, err := natsConn.Nc.Request("queue.messages", []byte(msg), 2*time.Second)
+		resp, err := natsConn.Nc.Request("queue.messages", []byte(msg), 5*time.Second)
 		if err != nil {
-			log.Printf("No se recibió respuesta: %v", err)
+			fmt.Fprintf(os.Stderr, "No se recibió respuesta: %v", err)
 			return nil, err
 		} else {
-			fmt.Printf("Respuesta recibida: %s\n", string(resp.Data))
+			log.Printf("Respuesta recibida: %s\n", string(resp.Data))
 			return resp, nil
 		}
 	} else {
-			log.Printf("No existe la conexión")
+			fmt.Fprintf(os.Stderr, "No existe la conexión")
 			err := errors.New("No existe la conexión")
 			return nil, err
 	}
@@ -205,72 +242,4 @@ func DeleteAllKeysFromKV() error {
 		err := errors.New("No existe KV Store")
 		return err
 	}
-}
-
-func testNATS() { //FIXME quit
-	//natsURL := os.Getenv("NATS_URL")
-	natsURL := "nats://nats_server:4222"
-	log.Println("ejecutando testNATS")
-	nc, err := nats.Connect(natsURL)
-	if err != nil {
-		log.Fatalf("Error al conectar a NATS: %v", err)
-	}
-	defer nc.Close()
-
-	log.Println("iniciar JetStream")
-	// Key-Value Store para historial de mensajes
-	js, err := nc.JetStream()
-	if err != nil {
-		log.Fatalf("Error al inicializar JetStream: %v", err)
-	}
-
-	log.Println("creando database messages_store")
-	kv, err := js.KeyValue("messages_store")
-	if err != nil {
-		log.Printf("Bucket 'messages_store' no encontrado, creándolo...")
-		// Crear el bucket si no existe
-		kv, err = js.CreateKeyValue(&nats.KeyValueConfig{
-			Bucket: "messages_store",
-		})
-		if err != nil {
-			log.Fatalf("Error al crear el KV Store: %v", err)
-		}
-	}
-
-	//for {
-	timestamp := time.Now().Format(time.RFC3339)
-	message := fmt.Sprintf("[%s] Usuario1: Hola desde el Publisher", timestamp)
-
-	log.Println("enviando request")
-	// Enviar mensaje y esperar respuesta
-	resp, err := nc.Request("queue.messages", []byte(message), 2*time.Second)
-	if err != nil {
-		log.Printf("No se recibió respuesta: %v", err)
-	} else {
-		fmt.Printf("Respuesta recibida: %s\n", string(resp.Data))
-	}
-
-	log.Println("Guardar en kv store")
-	// Guardar en KV Store
-	_, err = kv.Put("hola", []byte(message))
-	if err != nil {
-		log.Fatalf("Error al guardar en KV Store: %v", err)
-	}
-
-	fmt.Println("Mensaje enviado y almacenado:", message)
-	time.Sleep(5 * time.Second)
-
-	keys, err := kv.Keys()
-	if err != nil {
-		log.Fatalf("Error al obtener claves de KV Store: %v", err)
-	}
-
-	for _, key := range keys {
-		entry, err := kv.Get(key)
-		if err == nil {
-			fmt.Printf("Histórico: %s\n", string(entry.Value()))
-		}
-
-	}
-	//}
 }

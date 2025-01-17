@@ -67,12 +67,8 @@ func DeleteFunction(c *gin.Context) {
 
 // Invoke a function
 func InvokeFunction(c *gin.Context) {
-	fmt.Println("InvokeFunction")
 	functionName := c.Param("function_name")
 	username := c.GetString("username")
-
-	fmt.Println("Username: ", username)
-	fmt.Println("function: ", functionName)
 
 	//imageRef, exists := functions[username][functionName]
 	key := fmt.Sprintf("users/%s/functions/%s", username, functionName)
@@ -81,8 +77,6 @@ func InvokeFunction(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Function not found"})
 		return
 	}
-
-	fmt.Println("imageRef: ", string(imageRef.Value()))
 
 	var req FunctionParameter
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -98,8 +92,8 @@ func InvokeFunction(c *gin.Context) {
 	}
 	// FIXME: Simulate function execution
 	result := "Executed " + functionName + " with param: " + req.Param + ", Result: " + string(resp.Data)
-	log.Printf("Running container with image: %s", string(imageRef.Value()))
-	c.JSON(http.StatusOK, gin.H{"result": result})
+	log.Println(result)
+	c.JSON(http.StatusOK, gin.H{"result": string(resp.Data)})
 }
 
 /*func printFunctions() {

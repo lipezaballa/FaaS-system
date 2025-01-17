@@ -6,8 +6,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
-	"time"
+	"syscall"
 
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
@@ -35,7 +36,7 @@ func main() {
 	}
 
 	// Acceder al KV Store (asegúrate de que el bucket existe)
-	kv, err := js.KeyValue("messages_store")
+	/*kv, err := js.KeyValue("messages_store")
 	if err != nil {
 		log.Printf("Bucket 'messages_store' no encontrado, creándolo...")
 		// Crear el bucket si no existe
@@ -47,18 +48,87 @@ func main() {
 		}
 	} else if err != nil {
 		log.Fatalf("Error al acceder al KV Store: %v")
-	}
+	}*/
 
 	// Suscribirse a la cola "queue.messages" para recibir las activaciones de funciones
-	sub, err := nc.SubscribeSync("queue.messages")
+	/*sub, err := nc.SubscribeSync("queue.messages")
 	if err != nil {
 		log.Fatalf("Error al suscribirse a la cola: %v", err)
+	}*/
+
+	// Verificamos si el stream existe
+	streamName := "messages_stream"
+	_, err = js.StreamInfo(streamName)
+	if err != nil {
+		// El stream no existe, por lo tanto, lo creamos
+		log.Printf("El stream '%s' no existe. Creando el stream...", streamName)
+
+		// Configuración para crear el stream (puedes ajustarlo según tus necesidades)
+		streamConfig := &nats.StreamConfig{
+			Name:     streamName,
+			Subjects: []string{"queue.messages"},
+			Storage:  nats.FileStorage, // O puedes usar nats.MemoryStorage dependiendo de tu caso
+		}
+
+		// Intentamos crear el stream
+		_, err = js.AddStream(streamConfig)
+		if err != nil {
+			log.Fatalf("Error creando el stream: %v", err)
+		}
+
+		log.Printf("Stream '%s' creado exitosamente", streamName)
+	} else {
+		log.Printf("El stream '%s' ya existe", streamName)
+	}
+
+	// Subscribe to the queue messages and use the same queue group for all workers
+	sub, err := js.QueueSubscribe("queue.messages", "worker_group", func(msg *nats.Msg) {
+		log.Printf("Worker received message: %s", string(msg.Data))
+		// Process the message here (run docker command, etc.)
+		username, functionName, param, err := SplitFunctionParam(string(msg.Data))
+		if err != nil {
+			log.Printf("Formato de mensaje inválido: %s", msg.Data)
+			return
+		}
+
+		// Procesar la función
+		result, err := processFunction(workerMsgsId, functionName, param)
+		if err != nil {
+			log.Printf("Error ejecutando función para %s: %s\n", username, err.Error())
+			//js.Publish(ctx,"results."+requestId[1], []byte(fmt.Sprintf("Error para %s: %s", username, err.Error())))
+			nc.Publish(msg.Reply, []byte(fmt.Sprintf("Error: %v", err)))
+			return
+		}
+
+		// Guardar la solicitud en el KV Store
+		/*kvKey := fmt.Sprintf("activation_%d", time.Now().UnixNano())
+		_, err = kv.Put(kvKey, msg.Data)
+		if err != nil {
+			log.Printf("Error al guardar en el KV Store: %v", err)
+		} else {
+			log.Printf("Petición guardada en el KV Store con clave: %s", kvKey)
+		}*/
+
+		// Publicar el resultado de vuelta en el API Server
+		err = nc.Publish(msg.Reply, []byte(result))
+		if err != nil {
+			log.Printf("Error al enviar la respuesta: %v", err)
+		} else {
+			log.Printf("Resultado enviado: %s", result)
+		}
+
+		msg.Ack() // Acknowledge message when processed
+	})
+	defer sub.Unsubscribe()
+
+	if err != nil {
+		log.Fatalf("Error subscribing to messages: %v", err)
 	}
 
 	log.Println("Worker esperando activaciones de funciones...")
 
 	// Leer y procesar los mensajes
-	for {
+	/*for {
 		// Esperar por el mensaje
 		msg, err := sub.NextMsg(10 * time.Second) // Esperar hasta 10 segundos por un mensaje
 		if err != nil {
@@ -84,13 +154,6 @@ func main() {
 			//return
 			continue
 		}
-		//result, err := RunContainer(functionName, param)
-		/*if err != nil {
-			log.Printf("Error al ejecutar la función: %v", err)
-			// Publicar un error como respuesta al API Server
-			nc.Publish(msg.Reply, []byte(fmt.Sprintf("Error: %v", err)))
-			continue
-		}*/
 
 		// Guardar la solicitud en el KV Store
 		kvKey := fmt.Sprintf("activation_%d", time.Now().UnixNano())
@@ -108,27 +171,14 @@ func main() {
 		} else {
 			log.Printf("Resultado enviado: %s", result)
 		}
+	}*/
 
-		// Leer o escribir en el KV Store (ejemplo: escribir el mensaje recibido con un timestamp)
-		//timestamp := time.Now().Format(time.RFC3339)
-		/*kvKey := "key11"
-		_,err = kv.Put(kvKey, msg.Data)
-		if err != nil {
-			log.Printf("Error al guardar en el KV Store: %v", err)
-		} else {
-			log.Printf("Petición guardada en el KV Store con clave: %s", kvKey)
-		}
+	// Esperar señales de terminación (Ctrl+C, etc.)
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
-		// Enviar una respuesta de vuelta al API Server
-		//responseMessage := fmt.Sprintf("Worker procesó el mensaje: %s", string(msg.Data))
-		responseMessage := fmt.Sprintf("Resultado 1")
-		err = nc.Publish(msg.Reply, []byte(responseMessage))
-		if err != nil {
-			log.Printf("Error al enviar la respuesta: %v", err)
-		} else {
-			log.Printf("Respuesta enviada: %s", responseMessage)
-		}*/
-	}
+	<-signalChan // Bloquear hasta recibir una señal de terminación
+	log.Println("Worker terminado.")
 }
 
 // SplitFunctionParam divide una cadena en función y parámetro
@@ -216,8 +266,6 @@ func RunContainer(image string, param string) ([]byte, error) {
 func processFunction(workerMsgsId, functionName, parameter string) (string, error) {
 	// Simulación de ejecución con Docker
 	log.Printf("[%s] PROCESANDO la función %s", workerMsgsId, functionName)
-	path := os.Getenv("PATH")
-	fmt.Println("PATH:", path)
 	cmd := exec.Command("docker", "run", "--rm", functionName, parameter)
 	fmt.Println("Ejecutando comando:", strings.Join(cmd.Args, " "))
 	var out, stderr bytes.Buffer

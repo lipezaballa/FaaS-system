@@ -29,7 +29,6 @@ services:
         build:
             context: ./worker
             dockerfile: Dockerfile
-        container_name: worker
         depends_on:
             - nats
         volumes:
@@ -38,6 +37,8 @@ services:
             - NATS_URL=nats://nats_server:4222
         networks:
             - my_network
+        deploy:
+            replicas: 3
 
 networks:
     my_network:
