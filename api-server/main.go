@@ -46,6 +46,7 @@ func main() {
 	router.POST("/register", controllers.RegisterUser)
 	router.POST("/login", controllers.LoginUser)
 	router.GET("/", initPage)
+	router.DELETE("/database", deleteDataBase)
 
 	//Store natsConn in Gin Context
 	/*router.Use(func(c *gin.Context) { //FIXME, could be used in protected paths?
@@ -79,8 +80,12 @@ func initPage(c *gin.Context) {
 		log.Println("error in sendRequest, ", err)
 	}
 	natsConnection.StoreInKv(natsConn, string(resp.Data))
-	natsConnection.GetValues(natsConn)
+	natsConnection.PrintValues()
 	c.JSON(http.StatusOK, gin.H{"message": "Bienvenido a la API de FaaS-system"})
+}
+
+func deleteDataBase(c *gin.Context) {
+	natsConnection.DeleteAllKeysFromKV()
 }
 
 /*func getNatsConnFromContext(c *gin.Context) (*shared.NatsConnection, error) {

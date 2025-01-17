@@ -10,8 +10,10 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+var natsConn *shared.NatsConnection
+
 func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error)  {
-	natsConnetion := &shared.NatsConnection{
+	natsConn= &shared.NatsConnection{
 		Nc: nc,
 	}
 
@@ -22,7 +24,7 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 		log.Fatalf("Error al inicializar JetStream: %v", err)
 		return nil, err
 	}
-	natsConnetion.Js = &js
+	natsConn.Js = &js
 
 	log.Println("creando database messages_store")
 	kv, err := js.KeyValue("messages_store")
@@ -37,9 +39,9 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 			return nil, err
 		}
 	}
-	natsConnetion.Kv = kv
-	natsConnetion.Channel = channel
-	return natsConnetion, nil
+	natsConn.Kv = kv
+	natsConn.Channel = channel
+	return natsConn, nil
 }
 
 func SendRequest(natsConnection *shared.NatsConnection, msg string) (*nats.Msg, error) {
@@ -61,7 +63,7 @@ func SendRequest(natsConnection *shared.NatsConnection, msg string) (*nats.Msg, 
 	}
 }
 
-func StoreInKv(natsConnection *shared.NatsConnection, msg string) error {
+func StoreInKv(natsConnection *shared.NatsConnection, msg string) error { //FIXME quit
 	log.Println("Guardar en kv store")
 	if (natsConnection.Kv != nil) {
 		// Guardar en KV Store
@@ -80,22 +82,124 @@ func StoreInKv(natsConnection *shared.NatsConnection, msg string) error {
 	}
 }
 
-func GetValues(natsConnection *shared.NatsConnection) error {
-
-	if (natsConnection.Kv != nil) {
-	keys, err := natsConnection.Kv.Keys()
-	if err != nil {
-		log.Fatalf("Error al obtener claves de KV Store: %v", err)
-	}
-
-	for _, key := range keys {
-		entry, err := natsConnection.Kv.Get(key) //FIXME
-		if err == nil {
-			fmt.Printf("Histórico: %s\n", string(entry.Value()))
+func StoreFunction(username string, functionName string, functionImage string) error {
+	log.Println("Guardar en kv store")
+	if (natsConn != nil && natsConn.Kv != nil) {
+		// Guardar en KV Store
+		key := fmt.Sprintf("users/%s/functions/%s", username, functionName)
+		_, err := natsConn.Kv.Put(key, []byte(functionImage))
+		if err != nil {
+			log.Fatalf("Error al guardar en KV Store: %v", err)
+			return err
 		}
 
+		fmt.Println("Mensaje enviado y almacenado:", key)
+		return nil
+	} else {
+		log.Printf("No existe KV Store")
+		err := errors.New("No existe KV Store")
+		return err
 	}
-	return nil
+}
+
+func StoreUser(username string, password string) error {
+	log.Println("Guardar en kv store")
+	if (natsConn != nil && natsConn.Kv != nil) {
+		// Guardar en KV Store
+		//key := fmt.Sprintf("users/%s/functions/%s", username, functionName)
+		_, err := natsConn.Kv.Put(username, []byte(password))
+		if err != nil {
+			log.Fatalf("Error al guardar en KV Store: %v", err)
+			return err
+		}
+
+		fmt.Println("Mensaje enviado y almacenado:", username)
+		return nil
+	} else {
+		log.Printf("No existe KV Store")
+		err := errors.New("No existe KV Store")
+		return err
+	}
+}
+
+func PrintValues() error {
+
+	if (natsConn != nil && natsConn.Kv != nil) {
+		keys, err := natsConn.Kv.Keys()
+		if err != nil {
+			log.Fatalf("Error al obtener claves de KV Store: %v", err)
+		}
+
+		for _, key := range keys {
+			entry, err := natsConn.Kv.Get(key) //FIXME
+			if err == nil {
+				fmt.Printf("Database: Key: %s, Value: %s\n", key, string(entry.Value()))
+			}
+
+		}
+		return nil
+	} else {
+		log.Printf("No existe KV Store")
+		err := errors.New("No existe KV Store")
+		return err
+	}
+}
+
+func GetValue(key string) (nats.KeyValueEntry,bool) {
+	if (natsConn != nil && natsConn.Kv != nil) {
+
+		entry, err := natsConn.Kv.Get(key)
+		if err != nil {
+			log.Printf("Error al obtener la clave '%s': %v", key, err)
+			return nil, false
+		}
+		return entry, true
+
+	} else {
+		log.Printf("No existe KV Store")
+		return nil, false
+	}
+}
+
+func DeleteKeyFromKV(key string) error {
+    log.Printf("Eliminando clave '%s' del KV Store...", key)
+
+	if (natsConn != nil && natsConn.Kv != nil) {
+
+		err := natsConn.Kv.Delete(key)
+		if err != nil {
+			log.Printf("Error al eliminar la clave '%s': %v", key, err)
+			return err
+		}
+
+		log.Printf("Clave '%s' eliminada con éxito", key)
+		return nil
+
+	} else {
+		log.Printf("No existe KV Store")
+		err := errors.New("No existe KV Store")
+		return err
+	}
+}
+
+func DeleteAllKeysFromKV() error {
+	if (natsConn != nil && natsConn.Kv != nil) {
+		keys, err := natsConn.Kv.Keys()
+		if err != nil {
+			log.Fatalf("Error al obtener claves de KV Store: %v", err)
+		}
+
+		for _, key := range keys {
+			err := natsConn.Kv.Delete(key) //FIXME
+			if err != nil {
+				log.Printf("Error al eliminar la clave '%s': %v", key, err)
+				return err
+			}
+	
+			log.Printf("Clave '%s' eliminada con éxito", key)
+		}
+		return nil
+
 	} else {
 		log.Printf("No existe KV Store")
 		err := errors.New("No existe KV Store")

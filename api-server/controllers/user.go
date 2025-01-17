@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lipezaballa/FaaS-system/api-server/natsConnection"
 	"github.com/lipezaballa/FaaS-system/reverse-proxy/authentication"
 )
 
@@ -21,9 +22,15 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
-	storedPassword, exists := users[req.Username]
+	//storedPassword, exists := users[req.Username]
+	storedPasswordEntry, exists := natsConnection.GetValue(req.Username)
+	if (!exists) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User no exists"})
+		return
+	}
+	storedPassword := string(storedPasswordEntry.Value())
 	printVariables(req.Username, req.Password, storedPassword) //FIXME: nil in storedPassword?
-	if !exists || !authentication.CheckPasswordHash(req.Password, storedPassword) {
+	if !authentication.CheckPasswordHash(req.Password, storedPassword) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
@@ -47,7 +54,8 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	if _, exists := users[req.Username]; exists {
+	//if _, exists := users[req.Username]; exists {
+	if _, exists := natsConnection.GetValue(req.Username); exists {
 		c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
 		return
 	}
@@ -59,6 +67,8 @@ func RegisterUser(c *gin.Context) {
 	}
 
 	users[req.Username] = hashedPassword
+	natsConnection.StoreUser(req.Username, hashedPassword)
+	natsConnection.PrintValues()
 	printVariables(req.Username, req.Password, hashedPassword)
 	CreateMapForUser(&req)
 
