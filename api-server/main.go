@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -74,13 +73,13 @@ func initPage(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 	}*/
-	message := fmt.Sprintf("Peticion 1")
+	/*message := fmt.Sprintf("Peticion 1|Param 1")
 	resp, err := natsConnection.SendRequest(natsConn, message)
 	if err != nil {
 		log.Println("error in sendRequest, ", err)
 	}
 	natsConnection.StoreInKv(natsConn, string(resp.Data))
-	natsConnection.PrintValues()
+	natsConnection.PrintValues()*/
 	c.JSON(http.StatusOK, gin.H{"message": "Bienvenido a la API de FaaS-system"})
 }
 

@@ -90,8 +90,14 @@ func InvokeFunction(c *gin.Context) {
 		return
 	}
 
+	request := fmt.Sprintf("%s|%s|%s", username, string(imageRef.Value()), req.Param)
+	fmt.Println("request: ", request)
+	resp, err := natsConnection.SendRequest(request)
+	if err != nil {
+		log.Println("error in sendRequest, ", err)
+	}
 	// FIXME: Simulate function execution
-	result := "Executed " + functionName + " with param: " + req.Param
+	result := "Executed " + functionName + " with param: " + req.Param + ", Result: " + string(resp.Data)
 	log.Printf("Running container with image: %s", string(imageRef.Value()))
 	c.JSON(http.StatusOK, gin.H{"result": result})
 }

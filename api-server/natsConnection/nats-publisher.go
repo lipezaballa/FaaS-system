@@ -44,11 +44,11 @@ func InitJetStream(nc *nats.Conn, channel string) (*shared.NatsConnection, error
 	return natsConn, nil
 }
 
-func SendRequest(natsConnection *shared.NatsConnection, msg string) (*nats.Msg, error) {
+func SendRequest(msg string) (*nats.Msg, error) {
 	log.Println("enviando request")
 	// Enviar mensaje y esperar respuesta
-	if (natsConnection.Nc != nil) {
-		resp, err := natsConnection.Nc.Request("queue.messages", []byte(msg), 2*time.Second)
+	if (natsConn != nil && natsConn.Nc != nil) {
+		resp, err := natsConn.Nc.Request("queue.messages", []byte(msg), 2*time.Second)
 		if err != nil {
 			log.Printf("No se recibió respuesta: %v", err)
 			return nil, err
