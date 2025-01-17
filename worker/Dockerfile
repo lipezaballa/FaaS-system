@@ -2,7 +2,7 @@
 FROM golang:alpine AS builder
 
 # Establece el directorio de trabajo dentro del contenedor
-WORKDIR /faas-system
+WORKDIR /worker
 
 #COPY go.work go.work.sum ./
 #COPY ./api-server/go.mod ./api-server/go.sum ./
@@ -19,7 +19,7 @@ RUN go mod download
 #ENV GOWORK=on
 # Descarga las dependencias del módulo
 # RUN go mod tidy
-WORKDIR /faas-system/worker
+WORKDIR /worker
 # Compila el binario en modo release
 RUN go build -o worker .
 
@@ -33,7 +33,7 @@ RUN apk add --no-cache curl && curl -fsSL https://download.docker.com/linux/stat
 # WORKDIR /root/
 
 # Copia el binario desde la etapa de construcción
-COPY --from=builder /faas-system/worker/worker /usr/local/bin/worker
+COPY --from=builder /worker/worker /usr/local/bin/worker
 
 # Exponer el puerto en el que corre el API server
 # EXPOSE 8080

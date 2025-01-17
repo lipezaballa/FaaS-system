@@ -2,7 +2,7 @@
 FROM golang:alpine AS builder
 
 # Establece el directorio de trabajo dentro del contenedor
-WORKDIR /faas-system
+WORKDIR /api-server
 
 #COPY go.work go.work.sum ./
 #COPY ./api-server/go.mod ./api-server/go.sum ./
@@ -19,7 +19,7 @@ RUN go mod download
 #ENV GOWORK=on
 # Descarga las dependencias del módulo
 # RUN go mod tidy
-WORKDIR /faas-system/api-server
+WORKDIR /api-server
 # Compila el binario en modo release
 RUN go build -o api-server .
 
@@ -33,7 +33,7 @@ FROM alpine:latest
 # WORKDIR /root/
 
 # Copia el binario desde la etapa de construcción
-COPY --from=builder /faas-system/api-server/api-server /usr/local/bin/api-server
+COPY --from=builder /api-server/api-server /usr/local/bin/api-server
 
 # Exponer el puerto en el que corre el API server
 EXPOSE 8080

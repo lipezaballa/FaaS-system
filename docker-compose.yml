@@ -12,8 +12,8 @@ services:
     apiserver:
         image: api-server:1.0
         build:
-            context: .
-            dockerfile: api-server/Dockerfile
+            context: ./api-server
+            dockerfile: Dockerfile
         container_name: api-server
         ports:
             - "8080:8080"
@@ -27,8 +27,8 @@ services:
     worker:
         image: worker:1.0
         build:
-            context: .
-            dockerfile: worker/Dockerfile
+            context: ./worker
+            dockerfile: Dockerfile
         container_name: worker
         depends_on:
             - nats
