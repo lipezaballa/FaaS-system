@@ -9,9 +9,7 @@ import (
 	"github.com/lipezaballa/FaaS-system/reverse-proxy/authentication"
 )
 
-
-var users = map[string]string{}   // username:password
-
+//var users = map[string]string{}   // username:password
 
 // Login user and return a token
 func LoginUser(c *gin.Context) {
@@ -66,11 +64,11 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	users[req.Username] = hashedPassword
+	//users[req.Username] = hashedPassword
 	natsConnection.StoreUser(req.Username, hashedPassword)
 	natsConnection.PrintValues()
 	printVariables(req.Username, req.Password, hashedPassword)
-	CreateMapForUser(&req)
+	//CreateMapForUser(&req)
 
 	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
 }
@@ -86,5 +84,5 @@ func printVariables(username string, password string, hashedPassword string) {
 	fmt.Println("user: ", username)
 	fmt.Println("pass: ", password)
 	fmt.Println("hashedPass: ", hashedPassword)
-	fmt.Println(users)
+	//fmt.Println(users)
 }

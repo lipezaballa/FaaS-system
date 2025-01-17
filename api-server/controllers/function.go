@@ -7,15 +7,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/lipezaballa/FaaS-system/api-server/natsConnection"
-	"github.com/lipezaballa/FaaS-system/reverse-proxy/authentication"
 )
 
-var functions = map[string]map[string]string{} // username:function_name:image_reference
+//var functions = map[string]map[string]string{} // username:function_name:image_reference
 
-
-func CreateMapForUser(req *authentication.Request) {
+/*func CreateMapForUser(req *authentication.Request) {
 	functions[req.Username] = make(map[string]string)
-}
+}*/
 
 // Register a new function
 func RegisterFunction(c *gin.Context) {
@@ -36,11 +34,11 @@ func RegisterFunction(c *gin.Context) {
 		return
 	}
 
-	functions[username][req.Name] = req.ImageRef
+	//functions[username][req.Name] = req.ImageRef
 
 	natsConnection.StoreFunction(username, req.Name, req.ImageRef)
 	natsConnection.PrintValues()
-	printFunctions()
+	//printFunctions()
 	c.JSON(http.StatusCreated, gin.H{"message": "Function registered successfully"})
 }
 
@@ -58,12 +56,12 @@ func DeleteFunction(c *gin.Context) {
 		return
 	}
 
-	delete(functions[username], functionName)
+	//delete(functions[username], functionName)
 
 	//key := fmt.Sprintf("users/%s/functions/%s", username, functionName)
 	natsConnection.DeleteKeyFromKV(key)
 	natsConnection.PrintValues()
-	printFunctions()
+	//printFunctions()
 	c.JSON(http.StatusOK, gin.H{"message": "Function deleted successfully"})
 }
 
@@ -84,7 +82,7 @@ func InvokeFunction(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("imageRef: ", imageRef.Value())
+	fmt.Println("imageRef: ", string(imageRef.Value()))
 
 	var req FunctionParameter
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -94,10 +92,10 @@ func InvokeFunction(c *gin.Context) {
 
 	// FIXME: Simulate function execution
 	result := "Executed " + functionName + " with param: " + req.Param
-	log.Printf("Running container with image: %s", imageRef)
+	log.Printf("Running container with image: %s", string(imageRef.Value()))
 	c.JSON(http.StatusOK, gin.H{"result": result})
 }
 
-func printFunctions() {
+/*func printFunctions() {
 	fmt.Println(functions)
-}
+}*/
